@@ -11,12 +11,10 @@ class FinvizStockCollector:
     """
     Finviz에서 시가총액 상위 심볼 크롤링(레이트 리밋 대응 포함)
     """
-
-    FINVIZ_BASE_URL = "https://finviz.com/screener.ashx?v=152&f=cap_largeover&o=-marketcap&r={}"
-
     def __init__(self, max_retries: int = 5, backoff_factor: float = 1.5):
         # requests.Session: 연결을 재사용해서 효율적으로 여러 요청을 보낼 수 있음
         self.session = requests.Session()
+        self.BASE_URL = "https://finviz.com/screener.ashx?v=152&f=cap_largeover&o=-marketcap&r={}"
 
         # Retry 객체: HTTP 요청 실패 시 자동으로 재시도하는 정책 설정
         retry = Retry(
@@ -77,7 +75,7 @@ class FinvizStockCollector:
         429 에러 = "Too Many Requests": 서버가 짧은 시간에 너무 많은 요청을 받았다고 판단
         이 경우 점점 더 긴 시간을 기다렸다가 재시도 (지수 백오프)
         """
-        url = self.FINVIZ_BASE_URL.format(r)
+        url = self.BASE_URL.format(r)
 
         attempt = 0  # 시도 횟수
         while True:  # 성공하거나 최대 재시도 초과할 때까지 무한 반복

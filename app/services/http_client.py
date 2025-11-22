@@ -15,7 +15,8 @@ async def get_http_client():
     async with httpx.AsyncClient(
             timeout=10.0,
             limits=limits,
-            headers={"Content-Type": "application/json"}
+            headers={"Content-Type": "application/json"},
+            follow_redirects=True
     ) as client:
         yield client
         # async with 블록을 빠져나가는 순간 자동으로 client.aclose()가 호출됨
