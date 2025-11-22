@@ -20,7 +20,7 @@ class FinnhubStockCollector:
         print("🔍 Fetching stock symbols...")
         url = f"{self.BASE_URL}/symbol"
         params = {"exchange": exchange, "token": self.api_key}
-        target_mics = ["XNYS", "XNAS", "XASE"]
+        target_mics = ["XNYS", "XNAS", "XASE"] #하드 코딩 추후 수정 필요
 
         try:
             response = await self.client.get(url, params=params)
