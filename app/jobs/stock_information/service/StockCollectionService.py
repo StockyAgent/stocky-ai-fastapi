@@ -43,11 +43,9 @@ class StockCollectionService:
                     return None
 
         # Task 생성
-        print("테스크 생성!!!!")
         tasks = [process_with_limit(sym, figi) for sym,figi in symbols]
 
         # 실행
-        print("태스크 실행!!!!")
         await asyncio.gather(*tasks, return_exceptions=True)
 
     async def _process_single_symbol(self, symbol, figi):
@@ -84,10 +82,10 @@ class StockCollectionService:
 
 
 # # 테스트용 메인 함수
-async def main():
-    async with get_http_client() as client:
-        stock_collection_service = StockCollectionService(FinnhubStockCollector(client=client))
-        await stock_collection_service.update_stock_profiles()
-
-if __name__ == "__main__":
-    asyncio.run(main())
+# async def main():
+#     async with get_http_client() as client:
+#         stock_collection_service = StockCollectionService(FinnhubStockCollector(client=client))
+#         await stock_collection_service.update_stock_profiles()
+#
+# if __name__ == "__main__":
+#     asyncio.run(main())
