@@ -6,6 +6,7 @@ from langchain_core.prompts import ChatPromptTemplate
 from langchain_openai import ChatOpenAI
 from pydantic import BaseModel, Field
 
+from app.db.StockNews import StockNews
 from app.jobs.stock_news.collector.FinnhubNewsCollector import FinnhubNewsCollector
 from app.jobs.stock_news.extractor.crawler.CrawlerFactory import CrawlerFactory
 
@@ -86,27 +87,30 @@ class QuickNewsAnalyzer:
                 "symbol": symbol,
                 "format_instructions": parser.get_format_instructions()
             })
-            return response.model_dump()
+            return response
         except Exception as e:
             print(f"⚠️ 분석 실패: {e}")
             # 실패 시 기본값 반환 (시스템이 죽는 것 방지)
             return {"sentiment": "NEUTRAL", "importance": 0, "summary": "분석 실패"}
 
-    def analyze_batch(self, news_list: List[Dict], symbol:str) -> List[Dict]:
+    def analyze_batch(self, news_list: List[StockNews]) -> List[Dict]:
 
         batch_parser = PydanticOutputParser(pydantic_object=NewsBatchResult)
 
         # 뉴스 리스트를 텍스트로 예쁘게 변환
         formatted_news = ""
         for item in news_list:
-            formatted_news += f"\n[뉴스 ID: {item['id']}]\n내용: {item['content']}\n" + "-" * 30
+            formatted_news += f"\n[뉴스 ID: {item.id}]\n[symbol: {item.symbol}]   \n내용: {item.content}\n" + "-" * 30
 
         system_template = """
-            당신은 월스트리트에서 20년 경력을 가진 '수석 금융 뉴스 애널리스트'입니다. 
-            당신의 임무는 주어진 뉴스 텍스트를 분석하여 특정 종목({symbol})에 미칠 영향을 평가하고 구조화된 데이터로 추출하는 것입니다.
+        
+        당신은 월스트리트의 수석 금융 뉴스 애널리스트입니다. 
+        당신에게는 여러 건의 뉴스와 각 뉴스가 영향을 미칠 **대상 종목(Target Symbol)**이 주어집니다.
+        
+        당신의 임무는 각 뉴스를 읽고, **해당 뉴스에 명시된 '대상 종목'에 미칠 영향**만을 분석하여 구조화된 데이터로 추출하는 것입니다.
 
             ### 1. 감성 분석 기준 (Sentiment)
-            뉴스가 **{symbol}의 주가**에 미칠 영향을 기준으로 판단하십시오.
+            뉴스가 **(symbol)의 주가**에 미칠 영향을 기준으로 판단하십시오.
             - **POSITIVE**: 주가 상승 요인 (실적 호조, M&A, 신제품 성공, 목표가 상향 등)
             - **NEGATIVE**: 주가 하락 요인 (실적 부진, 규제 이슈, 소송, 악재 루머 등)
             - **NEUTRAL**: 주가에 영향이 없거나, 시장 전반의 일반적인 시황, 또는 단순한 등락 정보
@@ -121,7 +125,7 @@ class QuickNewsAnalyzer:
             ### 3. 요약 가이드라인 (Summary)
             - 반드시 **한국어**로 작성하십시오.
             - 뉴스의 핵심 원인과 결과를 포함하여 **한 문장**으로 요약하십시오.
-            - 주어({symbol})를 명확히 하십시오.
+            - 주어(symbol)를 명확히 하십시오.
         
             ### 출력 형식
             반드시 아래의 JSON 포맷을 지키십시오. 마크다운('''json) 태그나 추가 설명은 포함하지 마십시오.:
@@ -129,7 +133,6 @@ class QuickNewsAnalyzer:
             """
 
         human_template = """
-                종목(Symbol): {symbol}
 
                 분석할 뉴스 목록:
                 {formatted_news}
@@ -143,7 +146,6 @@ class QuickNewsAnalyzer:
         try:
             response = chain.invoke({
                 "formatted_news": formatted_news,
-                "symbol": symbol,
                 "format_instructions": batch_parser.get_format_instructions()
             })
 
@@ -176,7 +178,7 @@ async def main():
             content = await crawler.fetch(url)
 
             item['content'] = content
-        result = analyzer.analyze_batch(news[:10], "AAPL")
+        result = analyzer.analyze_batch(news[:10])
         print(result)
         print()
 

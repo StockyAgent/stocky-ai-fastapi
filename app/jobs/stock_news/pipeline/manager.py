@@ -6,7 +6,7 @@ from langchain_openai import ChatOpenAI
 from app.db.StockNews import StockNews
 from app.jobs.stock_news.extractor.crawler.CrawlerFactory import CrawlerFactory
 from app.jobs.stock_news.collector.FinnhubNewsCollector import FinnhubNewsCollector
-from .worker import NewsWorker
+from .worker import NewsWorker, NewsBatchWorker
 from ..analyzer.QuickNewsAnalyzer import QuickNewsAnalyzer
 
 
@@ -35,10 +35,12 @@ class PipelineManager:
 
         # 3. 워커 생성 및 배치
         for i in range(worker_count):
-            worker = NewsWorker(
+            worker = NewsBatchWorker(
                 crawler_factory=crawler_factory,
                 analyzer=self.analyzer,
-                queue=self.queue
+                queue=self.queue,
+                batch_size = 5,  # 테스트용으로 작게 설정해봄직 함
+                batch_timeout = 3.0
             )
             # 워커를 백그라운드 태스크로 실행
             task = asyncio.create_task(worker.run(worker_id=i + 1))
@@ -87,6 +89,23 @@ class PipelineManager:
 
         print(f"✅ 큐 적재 완료: {count}건")
 
+    # 다중 종목 수집 메서드
+    async def ingest_all_stocks_news(self, symbols: list[str], start_date: str, end_date: str):
+        """
+        여러 종목 리스트를 받아서 순차적으로 수집을 요청합니다.
+        """
+        print(f"🚀 총 {len(symbols)}개 종목 수집을 시작합니다.")
+
+        for symbol in symbols:
+            # 1. 기존 ingest_news 재활용
+            await self.ingest_news(symbol, start_date, end_date)
+
+            # 2. [Rate Limit 방어] Finnhub 분당 60회 제한 고려
+            # 너무 빨리 요청하면 429 에러 뜨니까, 종목 사이에 숨 고르기
+            await asyncio.sleep(1.0)
+
+        print("🎉 모든 종목의 수집 요청이 큐에 등록되었습니다.")
+
 
 # 테스트용 메인 함수
 async def main():
@@ -98,7 +117,7 @@ async def main():
 
         # 3. 뉴스 투입 (애플 뉴스 가져오기)
         # 이 함수가 실행되면 큐에 데이터가 쌓이고, 워커들이 즉시 처리를 시작함
-        await manager.ingest_news("AAPL", "2025-11-19", "2025-11-21")
+        await manager.ingest_news("MSFT", "2025-11-25", "2025-11-26")
 
         # 4. 큐가 빌 때까지 대기 (모든 처리가 끝날 때까지 Main 유지)
         await manager.queue.join()
