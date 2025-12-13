@@ -1,8 +1,35 @@
-from typing import Optional, Any
-
 from pydantic import BaseModel, Field, ConfigDict
+from typing import Optional
 
 
+# ==========================================
+# Request Schemas (API 요청용 DTO)
+# ==========================================
+class NewsCollectRequest(BaseModel):
+    symbol: str = Field(..., description="수집할 주식 심볼 (예: AAPL)")
+    start_date: Optional[str] = Field(
+        default=None,
+        description="시작 날짜 (YYYY-MM-DD). 없으면 오늘 날짜"
+    )
+    end_date: Optional[str] = Field(
+        default=None,
+        description="종료 날짜 (YYYY-MM-DD). 없으면 오늘 날짜"
+    )
+
+class ManySymbolNewsCollectRequest(BaseModel):
+    symbols: list= Field(..., description="수집할 주식 심볼 리스트 (예: [AAPL, MSFT])")
+    start_date: Optional[str] = Field(
+        default=None,
+        description="시작 날짜 (YYYY-MM-DD). 없으면 오늘 날짜"
+    )
+    end_date: Optional[str] = Field(
+        default=None,
+        description="종료 날짜 (YYYY-MM-DD). 없으면 오늘 날짜"
+    )
+
+# ==========================================
+# Data Models (DB 저장/조회용 틀)
+# ==========================================
 class StockNews(BaseModel):
     # Pydantic V2 설정
     model_config = ConfigDict(populate_by_name=True)
@@ -25,28 +52,3 @@ class StockNews(BaseModel):
     sentiment: Optional[str] = Field(default=None, description="AI 감성 분석 (POSITIVE/NEGATIVE)")
     impact_score: Optional[int] = Field(default=None, description="중요도 점수 (0~100)")
     ai_summary: Optional[str] = Field(default=None, description="AI 한줄 요약")
-
-    # --- [3. DynamoDB 변환 메서드] ---
-    def to_dynamodb_item(self) -> dict[str, Any]:
-        """
-        DynamoDB에 저장할 형태로 변환
-        PK: STOCK#{symbol}
-        SK: NEWS#{datetime} (최신순 정렬을 위해)
-        """
-        item = self.model_dump(exclude_none=True)  # None인 필드는 저장 안 함 (용량 절약)
-
-        # PK/SK 생성 전략
-        # PK: 종목별로 모으기 위해 STOCK#AAPL
-        item['PK'] = f"STOCK#{self.symbol}"
-
-        # SK: 시간순 정렬을 위해 NEWS#타임스탬프
-        # (주의: 같은 시간에 뉴스가 2개일 수도 있으니 ID를 붙여 유니크하게 만듦)
-        item['SK'] = f"NEWS#{self.datetime}#{self.id}"
-
-        # GSI용 데이터 (옵션): 날짜별로 모아보고 싶다면
-        # item['GSI1_PK'] = f"DATE#{datetime.fromtimestamp(self.datetime).date()}"
-        # item['GSI1_SK'] = f"SCORE#{self.impact_score}"
-
-        item['Type'] = "News"  # 아이템 구분용
-
-        return item

@@ -3,9 +3,9 @@ import httpx
 from dotenv import load_dotenv
 from langchain_openai import ChatOpenAI
 
-from app.db.StockNews import StockNews
 from app.jobs.stock_news.extractor.crawler.CrawlerFactory import CrawlerFactory
 from app.jobs.stock_news.collector.FinnhubNewsCollector import FinnhubNewsCollector
+from app.schemas.stockNews import StockNews
 from .worker import NewsWorker, NewsBatchWorker
 from ..analyzer.QuickNewsAnalyzer import QuickNewsAnalyzer
 

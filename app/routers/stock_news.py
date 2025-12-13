@@ -1,8 +1,7 @@
 from fastapi import APIRouter, BackgroundTasks, HTTPException, Request
 from datetime import datetime, timedelta
 
-from app.db.dto.NewsCollectRequest import NewsCollectRequest, ManySymbolNewsCollectRequest
-
+from app.schemas.stockNews import NewsCollectRequest, ManySymbolNewsCollectRequest
 router = APIRouter()
 
 

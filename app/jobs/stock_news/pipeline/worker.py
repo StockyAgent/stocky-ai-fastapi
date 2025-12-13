@@ -1,8 +1,9 @@
 import time
 import asyncio
 import logging
-from app.db.StockNews import StockNews
-from app.services.aws_service import put_item_dynamodb, put_items_batch_dynamodb
+
+from app.db.repositories.StockNewsRepository import news_repo
+from app.schemas.stockNews import StockNews
 
 logger = logging.getLogger("NewsWorker")
 
@@ -16,7 +17,7 @@ class NewsWorker:
         self.crawler_factory = crawler_factory
         self.analyzer = analyzer
         self.queue = queue
-        self.table_name = "StockProjectData"
+        # self.table_name = "StockProjectData"
 
     async def run(self, worker_id: int):
         logger.info(f"👷 워커 {worker_id}번 출근 완료")
@@ -68,7 +69,9 @@ class NewsWorker:
         item.ai_summary = analysis_result.summary
 
         # C. 저장 (Save)
-        await put_item_dynamodb(table_name=self.table_name ,item = item.to_dynamodb_item())
+
+        await news_repo.save_news(item)
+        # await put_item_dynamodb(table_name=self.table_name ,item = item.to_dynamodb_item())
 
 
 class NewsBatchWorker:
@@ -177,4 +180,5 @@ class NewsBatchWorker:
 
 
         #저장
-        await put_items_batch_dynamodb(table_name=self.table_name, items=[item.to_dynamodb_item() for item in items])
+        await news_repo.save_news_batch(items)
+        # await put_items_batch_dynamodb(table_name=self.table_name, items=[item.to_dynamodb_item() for item in items])

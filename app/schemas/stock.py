@@ -4,6 +4,12 @@ from typing import Optional, Union, Dict, Any
 from pydantic import BaseModel, Field, ConfigDict
 
 
+
+
+
+# ==========================================
+# Data Models (DB 저장/조회용 틀)
+# ==========================================
 class StockProfile(BaseModel):
     model_config = ConfigDict(
         populate_by_name=True,  # v2에서는 이 이름 사용

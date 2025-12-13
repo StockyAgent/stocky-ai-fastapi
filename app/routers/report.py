@@ -4,7 +4,8 @@ from fastapi import APIRouter, HTTPException
 from fastapi.responses import HTMLResponse
 from pydantic import BaseModel, Field
 
-from app.db.dto.ReportRequest import ManySymbolReportRequest, ReportRequest
+from app.db.repositories.reportRepository import report_repo
+from app.schemas.report import ReportRequest, ManySymbolReportRequest
 from app.jobs.Daily_report_agent.nodes.nodes import write_report
 
 # [중요] 방금 작성하신 write_report 함수를 임포트해야 합니다.
@@ -19,7 +20,7 @@ async def generate_daily_report(request: ReportRequest):
     """
     특정 종목의 데일리 리포트를 생성하고 HTML로 반환합니다.
     """
-    print(f"📥 API 요청 수신: {request.symbol} 리포트 생성")
+    print(f"📥 API 요청 수신: {request.symbol}({request.investment_type}) 리포트 생성")
 
     try:
         # LangGraph 워크플로우 실행
@@ -28,6 +29,13 @@ async def generate_daily_report(request: ReportRequest):
 
         if not html_content:
             raise HTTPException(status_code=500, detail="리포트 생성에 실패했습니다 (데이터 부족 또는 에러).")
+
+        await report_repo.save_report(
+            symbol=request.symbol,
+            html=html_content,
+            invest_type=request.investment_type,
+            category="DAILY"
+        )
 
         # HTMLResponse를 쓰면 브라우저가 태그를 해석해서 예쁜 화면을 보여줍니다.
         return HTMLResponse(content=html_content)
