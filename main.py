@@ -1,7 +1,7 @@
 from fastapi import FastAPI
 
 from app.jobs.stock_news.pipeline.manager import PipelineManager
-from app.routers import stock, stock_news
+from app.routers import stock, stock_news, report
 
 from contextlib import asynccontextmanager
 from fastapi import FastAPI
@@ -31,6 +31,8 @@ app = FastAPI(lifespan=lifespan, title="AI Stock Analyst Agent")
 # 라우터 등록
 app.include_router(stock_news.router, prefix="/api/news", tags=["News"])
 app.include_router(stock.router, prefix="/api/stock", tags=["Stock"])
+
+app.include_router(report.router, prefix="/api/report", tags=["Report"])
 
 if __name__ == "__main__":
     import uvicorn

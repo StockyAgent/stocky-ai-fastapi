@@ -3,6 +3,7 @@ from app.core.settings import settings
 from contextlib import asynccontextmanager
 from botocore.exceptions import ClientError
 import asyncio
+from boto3.dynamodb.conditions import Key, Attr
 
 #공통 설정
 session_args = {
@@ -106,6 +107,7 @@ async def put_items_batch_dynamodb(table_name: str, items: list):
                         print(f"Critical Error: {e}")
                         #추후 DLQ로 보내는 로직 추가 가능
                         break
+            print("저장 완료")
 
 
 
@@ -125,3 +127,53 @@ async def put_items_batch_dynamodb(table_name: str, items: list):
 
             await asyncio.gather(*tasks)
 
+
+async def fetch_news_by_date(symbol: str, start_ts: int, end_ts: int, min_importance: int = 6) -> list:
+    table_name = "StockProjectData"
+    """
+    symbol(PK)에 해당하고, 특정 기간(start_ts ~ end_ts)에 속하는 뉴스 조회
+    """
+    # 검색 범위를 위한 SK 문자열 생성
+    # 예: NEWS#1763510400 (뒤에 ID가 없어도 문자열 비교 원리에 의해 범위 검색이 가능합니다)
+    sk_start = f"NEWS#{start_ts}#000000000"  # 시작 날짜의 처음부터 포함하기 위해 앞에 작은 값을 붙여줌 (Prefix 기법)
+    sk_end = f"NEWS#{end_ts}#999999999"  # 끝 날짜의 마지막까지 포함하기 위해 뒤에 큰 값을 붙여줌 (Suffix 기법)
+
+    pk_value = f"STOCK#{symbol}"
+
+    print(f"🔍 Querying: {symbol} | {sk_start} ~ {sk_end}")
+
+    try:
+        async with get_dynamodb_resource() as dynamo_resource:
+            table = await dynamo_resource.Table(table_name)
+            # [디버깅용] 테이블의 실제 키 스키마를 출력합니다.
+            key_schema = await table.key_schema
+            print(f"🔑 Table Key Schema: {key_schema}")
+
+            # [Query 작성]
+            # PK는 eq(일치), SK는 between(범위) 조건을 사용합니다.
+            response = await table.query(
+                KeyConditionExpression=Key('PK').eq(pk_value) & Key('SK').between(sk_start, sk_end),
+                FilterExpression=Attr('impact_score').gte(min_importance)  # 날짜로 1차 필터링 후, 중요도로 2차 필터링
+            )
+
+            items = response.get('Items', [])
+            print(f"✅ 기간 조회 완료: {len(items)}건 발견")
+            return items
+
+    except Exception as e:
+        print(f"❌ Error: {e}")
+        return []
+
+#테스트 추후 제거
+# async def test():
+#     import httpx
+#     async with httpx.AsyncClient() as client:
+#         news = await fetch_news_by_date("StockProjectData", "AAPL", 1753514200, 1773516200, min_importance=8)
+#         print(len(news))
+#         for item in news:
+#             print(item.get('ai_summary'), ": url = ", item.get('url'))
+#             print()
+#
+# import asyncio
+# if __name__ == "__main__":
+#     asyncio.run(test())

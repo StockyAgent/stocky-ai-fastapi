@@ -4,3 +4,9 @@ pydantic-settings
 httpx
 python-dotenv
 aioboto3
+
+langchain
+duckduckgo-search
+ddgs
+langchain-community
+langchain-core
