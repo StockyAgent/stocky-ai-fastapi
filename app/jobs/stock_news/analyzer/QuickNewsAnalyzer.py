@@ -6,7 +6,7 @@ from langchain_core.prompts import ChatPromptTemplate
 from langchain_openai import ChatOpenAI
 from pydantic import BaseModel, Field
 
-from app.db.StockNews import StockNews
+from app.schemas.stockNews import StockNews
 from app.jobs.stock_news.collector.FinnhubNewsCollector import FinnhubNewsCollector
 from app.jobs.stock_news.extractor.crawler.CrawlerFactory import CrawlerFactory
 

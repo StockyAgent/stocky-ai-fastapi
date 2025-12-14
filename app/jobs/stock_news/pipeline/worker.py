@@ -1,9 +1,13 @@
 import time
 import asyncio
 import logging
-from app.db.StockNews import StockNews
+from app.db.repositories.StockNewsRepository import news_repo
+from app.schemas.stockNews import StockNews
 from app.jobs.stock_news.services.news_service import NewsService
-from app.services.aws_service import put_item_dynamodb, put_items_batch_dynamodb
+
+from app.db.repositories.StockNewsRepository import news_repo
+from app.schemas.stockNews import StockNews
+
 
 logger = logging.getLogger("NewsWorker")
 

@@ -1,0 +1,30 @@
+version: '3.8'
+
+services:
+  # ------------------------------------
+  # 1. FastAPI 서버 (백엔드)
+  # ------------------------------------
+  backend-api:
+    build: .
+    container_name: stocky-api
+    # API 실행 명령어
+    command: uvicorn main:app --host 0.0.0.0 --port 8080 --reload
+    ports:
+      - "8080:8080"
+    env_file:
+      - .env
+    restart: always
+
+  # ------------------------------------
+  # 2. 백그라운드 워커 (SQS 감시자)
+  # ------------------------------------
+  retrieval-worker:
+    build: .
+    container_name: stocky-worker
+    # [중요] 여기서는 워커 실행 파일을 실행함
+    command: python -m app.sqs.worker.main_worker
+    env_file:
+      - .env
+    depends_on:
+      - backend-api
+    restart: always

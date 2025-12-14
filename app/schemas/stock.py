@@ -4,6 +4,12 @@ from typing import Optional, Union, Dict, Any
 from pydantic import BaseModel, Field, ConfigDict
 
 
+
+
+
+# ==========================================
+# Data Models (DB 저장/조회용 틀)
+# ==========================================
 class StockProfile(BaseModel):
     model_config = ConfigDict(
         populate_by_name=True,  # v2에서는 이 이름 사용
@@ -49,8 +55,8 @@ class StockProfile(BaseModel):
             if item_data.get(key) is not None:
                 item_data[key] = Decimal(str(item_data[key]))
 
-        # PK, SK 추가
-        item_data['PK'] = f"FIGI#{self.figi}"
-        item_data['SK'] = "METADATA"
+        # # PK, SK 추가 --> Repository에서 담당하므로 주석 처리: pk sk의 생성 책임은 Repository에 있음
+        # item_data['PK'] = f"FIGI#{self.figi}"
+        # item_data['SK'] = "METADATA"
 
         return item_data

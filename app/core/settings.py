@@ -16,12 +16,16 @@ class Settings(BaseSettings):
     # --- 2. 로컬 개발용 DynamoDB 설정 ---
     # APP_ENV가 "development"일 때만 사용될 주소입니다.
     # 우리가 Docker에서 8000번 포트로 열었기 때문입니다.
-    DYNAMODB_ENDPOINT_URL: Optional[str] = "http://localhost:8000"
+    DYNAMODB_ENDPOINT_URL: Optional[str] ="http://host.docker.internal:8000" #도커상에서 로컬 접속 못함 추후 수정 필요 "http://localhost:8000"
 
     #AWS 설정
     AWS_ACCESS_KEY_ID: str
     AWS_SECRET_ACCESS_KEY: str
     AWS_REGION: str = "ap-northeast-2"
+
+    # SQS Queue URLs
+    SQS_REQUEST_QUEUE_URL: str
+    SQS_RESPONSE_QUEUE_URL: str
 
     # 이 모든 정보들을 ".env"에서 가져옴
     model_config = SettingsConfigDict(env_file=".env")

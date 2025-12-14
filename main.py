@@ -1,3 +1,5 @@
+import logging
+
 from dotenv import load_dotenv
 from fastapi import FastAPI
 
@@ -36,10 +38,17 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(lifespan=lifespan, title="AI Stock Analyst Agent")
 
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s [%(levelname)s] %(name)s: %(message)s'
+)
+
+
 # 라우터 등록
 app.include_router(stock_news.router, prefix="/api/news", tags=["News"])
 app.include_router(stock.router, prefix="/api/stock", tags=["Stock"])
 app.include_router(report.router, prefix="/api/report", tags=["Report"])
+
 
 if __name__ == "__main__":
     import uvicorn

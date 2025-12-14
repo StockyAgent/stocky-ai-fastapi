@@ -1,10 +1,8 @@
 from app.core.AsyncRateLimiter import FinnhubAsyncRateLimiter
-from app.db.StockProfile import StockProfile
+from app.schemas.stock import StockProfile
 from app.jobs.stock_information.collector.FinnhubStockCollector import FinnhubStockCollector
-from app.services.aws_service import put_item_dynamodb
+# from app.services.aws_service import put_item_dynamodb
 import asyncio
-
-from app.services.http_client import get_http_client
 
 
 class StockCollectionService:
