@@ -10,3 +10,6 @@ duckduckgo-search
 ddgs
 langchain-community
 langchain-core
+langchain_openai
+bs4
+yfinance

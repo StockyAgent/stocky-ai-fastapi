@@ -17,7 +17,14 @@ async def trigger_news_collection(
     """
     # 1. 날짜 기본값 처리 (입력 없으면 오늘)
     today = datetime.now()
-    start_date = body.start_date if body.start_date else (today - timedelta(days=1)).strftime("%Y-%m-%d")
+    if today.weekday() == 0: # 월요일
+        days_to_fetch = 3
+    elif today.weekday() == 6: # 일요일
+        days_to_fetch = 2
+    else:
+        days_to_fetch = 1
+
+    start_date = body.start_date if body.start_date else (today - timedelta(days=days_to_fetch)).strftime("%Y-%m-%d")
     end_date = body.end_date if body.end_date else today.strftime("%Y-%m-%d")
 
     print("start:", start_date, "end:", end_date)

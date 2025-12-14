@@ -4,8 +4,9 @@ from fastapi import APIRouter, HTTPException
 from fastapi.responses import HTMLResponse
 from pydantic import BaseModel, Field
 
-from app.db.repositories.reportRepository import report_repo
-from app.schemas.report import ReportRequest, ManySymbolReportRequest
+from app.services.report_service import report_service
+from app.db.repositories.ReportRepository import report_repo
+from app.schemas.report import ReportRequest, ManySymbolReportRequest, ReportRetrievalResponse, ReportRetrievalRequest
 from app.jobs.Daily_report_agent.nodes.nodes import write_report
 
 # [중요] 방금 작성하신 write_report 함수를 임포트해야 합니다.
@@ -64,3 +65,16 @@ async def generate_daily_reports(request: ManySymbolReportRequest):
     except Exception as e:
         print(f"❌ API 에러 발생: {e}")
         raise HTTPException(status_code=500, detail=str(e))
+
+@router.post("/reports/batch_lookup", response_model=ReportRetrievalResponse)
+async def fetch_reports(request: ReportRetrievalRequest):
+    results = await report_service.get_aggregated_reports(
+        symbols=request.symbols,
+        invest_type="trader"  #request.investment_type
+    )
+
+    return ReportRetrievalResponse(
+        request_id=request.request_id,
+        user_id=request.user_id,
+        results=results
+    )

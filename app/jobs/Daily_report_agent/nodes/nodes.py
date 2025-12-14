@@ -1,3 +1,4 @@
+import logging
 from typing import Literal
 
 from dotenv import load_dotenv
@@ -8,10 +9,14 @@ from langgraph.graph import StateGraph
 from pydantic import BaseModel, Field
 
 from app.jobs.Daily_report_agent.state.state import ReportState, StockReportSchema
-from app.jobs.Daily_report_agent.tools.tools import fetch_stock_price_for_investor, fetch_news_by_date, fetch_db_news, \
+from app.jobs.Daily_report_agent.tools.tools import fetch_stock_price_for_investor, fetch_db_news, \
     search_market_issues, \
     render_html_report, fetch_stock_price_for_traders
 from datetime import datetime
+
+
+
+logger = logging.getLogger("nodes")
 
 # 환경변수 로드
 load_dotenv()
@@ -22,11 +27,17 @@ llm_fast = ChatOpenAI(model="gpt-4o-mini", temperature=0)
 
 async def node_collector(state: ReportState):
     symbol = state["symbol"]
-    print(f"\n🚀 [1. Collector] 필수 데이터 수집 시작 ({symbol})...")
+    logger.info(f"\n🚀 [1. Collector] 필수 데이터 수집 시작 ({symbol})...")
 
     # 월요일(0)이면 3일, 그 외는 1일
     today = datetime.now()
-    days_to_fetch = 3 if today.weekday() == 0 else 1
+    weekday_value = today.weekday()
+    if weekday_value == 6:
+        days_to_fetch = 2
+    elif weekday_value == 0:
+        days_to_fetch = 3
+    else:
+        days_to_fetch = 1
 
     # 비동기 함수는 ainvoke + await
     investment_type = state.get("investment_type", "investor")
@@ -38,13 +49,14 @@ async def node_collector(state: ReportState):
     news_data = await fetch_db_news.ainvoke({"symbol": symbol, "days": days_to_fetch})
 
     # news_data = []
-    print(f"   - 주가 정보 확보 완료")
-    print(f"   - 내부 DB 뉴스: {len(news_data)}건 확보")
+    logger.info(f"   - 주가 정보 확보 완료")
+    logger.info(f"   - 내부 DB 뉴스: {len(news_data)}건 확보")
 
     return {
         "price_data": price_data,
         "news_data": news_data
     }
+
 
 class AnalysisResult(BaseModel):
     is_sufficient: bool = Field(description="정보 충분 여부")
@@ -53,7 +65,7 @@ class AnalysisResult(BaseModel):
 
 
 def node_analyzer(state: ReportState):
-    print(f"🧠 [2. Analyzer] 데이터 분석 중...")
+    logger.info(f"🧠 [2. Analyzer] 데이터 분석 중...")
     symbol = state["symbol"]
     news_data = state["news_data"]
     price_change = state.get("price_data", {}).get("change_pct", 0.0)
@@ -82,12 +94,12 @@ def node_analyzer(state: ReportState):
    - **Case A: 주가 변동폭이 큽니까? (절대값 3% 이상)**
      - **필수:** 뉴스가 이 큰 변동의 **직접적인 원인**을 명확히 설명해야 합니다.
      - 설명하지 못한다면 -> `is_sufficient: False` (이유: 급등락 원인 불명)
-   
+
    - **Case B: 주가 변동폭이 작습니까? (절대값 3% 미만)**
      - **주의:** 작은 변동(예: 0.2%, -0.5%)은 통상적인 시장 노이즈입니다.
      - **지침:** 뉴스가 주가 변동을 설명할 필요가 **없습니다.** - 뉴스 내용이 유익하고 구체적이라면, 주가 변동과 상관없이 `is_sufficient: True`로 판단하십시오.
      - **경고:** "0.5% 하락의 원인을 설명하지 못해서 불충분하다"라고 판단하면 **감점**입니다.
-     
+
     3. **구체성 (Specificity)**: 구체적인 수치(실적 발표, 계약 규모)나 사건(CEO 사임, 규제 발표)이 포함되어 있는가?
        - 단순히 "시장 변동성", "기술적 분석" 같은 뜬구름 잡는 소리는 -> '불충분'
 
@@ -105,24 +117,26 @@ def node_analyzer(state: ReportState):
 
     # 로그 출력
     if result.is_sufficient:
-        print(f"   ✅ 판단: 충분함.")
+        logger.info(f"   ✅ 판단: 충분함.")
     else:
-        print(f"   ⚠️ 판단: 불충분함. ({result.missing_reason})")
-        print(f"   🔍 추가 검색어: {result.search_keyword}")
+        logger.info(f"   ⚠️ 판단: 불충분함. ({result.missing_reason})")
+        logger.info(f"   🔍 추가 검색어: {result.search_keyword}")
 
     return {
         "is_data_sufficient": result.is_sufficient,
         "missing_info_reason": result.missing_reason,
         "search_keyword": result.search_keyword
-            }
+    }
+
 
 async def node_searcher(state: ReportState):
     print(f"🔎 [3. Searcher] 추가 검색: {state['search_keyword']}")
     web_news = await search_market_issues.ainvoke({"query": state["search_keyword"]})
     return {"news_data": state["news_data"] + web_news}
 
+
 async def node_writer(state: ReportState):
-    print("📝 [4. Writer] 리포트 json 데이터 생성 중...")
+    logger.info("📝 [4. Writer] 리포트 json 데이터 생성 중...")
     investment_type = state.get("investment_type")
     current_date = datetime.now().strftime("%Y-%m-%d")
 
@@ -192,6 +206,7 @@ async def node_writer(state: ReportState):
 
     return {"draft": report_data}
 
+
 class ReportReviewResult(BaseModel):
     is_hallucination: bool = Field(description="할루시네이션 여부")
     is_pass: bool = Field(description="내용이 정확한지 여부")
@@ -199,8 +214,9 @@ class ReportReviewResult(BaseModel):
         description="할루시네이션이 발견된 경우거나 , 이를 바로잡기 위해 구체적인 피드백 제공"
     )
 
+
 def node_reviewer(state: ReportState):
-    print("🔍 [5. Reviewer] 리포트 검수 중...")
+    logger.info("🔍 [5. Reviewer] 리포트 검수 중...")
 
     symbol = state["symbol"]
     news_data = state["news_data"]
@@ -214,13 +230,13 @@ def node_reviewer(state: ReportState):
         당신은 리포트 검수 편집장입니다.
         아래 [뉴스 데이터]와 [작성된 리포트]를 대조하여 거짓 정보(Hallucination)가 있는지 확인하세요.
         또한 이슈들의 내용 구성이 주어진 정보를 토대로 적합한지를 검수하세요.
-        
+
         [가격 데이터]
         {price_data}
 
         [뉴스 데이터]
         {news_data}
-        
+
 
         [작성된 리포트]
         제목: {headline}
@@ -249,41 +265,43 @@ def node_reviewer(state: ReportState):
 
     # 검수 로직 구현 (생략)
     print(result)
-    return {"is_hallucination": result.is_hallucination, "is_pass":result.is_pass ,"feedback": result.feedback}
+    return {"is_hallucination": result.is_hallucination, "is_pass": result.is_pass, "feedback": result.feedback}
+
 
 def decide_route(state: ReportState):
     if not state["is_data_sufficient"]:
         return "searcher"
     else:
-        return "writer" #추후 수정
+        return "writer"  # 추후 수정
+
 
 def route_after_review(state):
     if state["is_hallucination"]:
-        return "writer"     # 검수 통과 -> 종료
+        return "writer"  # 검수 통과 -> 종료
     elif not state["is_pass"]:
         return "writer"
     else:
-        return "END" # 검수 실패 -> 다시 검색
-
+        return "END"  # 검수 실패 -> 다시 검색
 
 
 # ================================
 workflow = StateGraph(ReportState)
-workflow.add_node("collector",node_collector)
-workflow.add_node("analyzer",node_analyzer)
-workflow.add_node("searcher",node_searcher)
+workflow.add_node("collector", node_collector)
+workflow.add_node("analyzer", node_analyzer)
+workflow.add_node("searcher", node_searcher)
 workflow.add_node("writer", node_writer)
 workflow.add_node("reviewer", node_reviewer)
 
 workflow.set_entry_point("collector")
-workflow.add_edge("collector", "analyzer" )
-workflow.add_conditional_edges("analyzer", decide_route,{"writer": "writer", "searcher": "searcher"} )
+workflow.add_edge("collector", "analyzer")
+workflow.add_conditional_edges("analyzer", decide_route, {"writer": "writer", "searcher": "searcher"})
 workflow.add_edge("searcher", "writer")
 workflow.add_edge("writer", "reviewer")
-workflow.add_conditional_edges("reviewer", route_after_review,{"writer": "writer", "END": END} )
+workflow.add_conditional_edges("reviewer", route_after_review, {"writer": "writer", "END": END})
 # workflow.add_edge("writer", END)
 
 app = workflow.compile()
+
 
 async def write_report(symbol: str, investment_type: Literal["trader", "investor"] = "investor"):
     initial_state = {
@@ -303,7 +321,7 @@ async def write_report(symbol: str, investment_type: Literal["trader", "investor
     final_state = await app.ainvoke(initial_state)
     report_data = final_state["draft"]
     if report_data:
-        print("\n🎨 [Renderer] HTML 리포트 생성 완료")
+        logger.info("\n🎨 [Renderer] HTML 리포트 생성 완료")
         final_html = render_html_report(symbol, report_data)
 
         print("\n" + "=" * 50)
@@ -311,8 +329,7 @@ async def write_report(symbol: str, investment_type: Literal["trader", "investor
         print("=" * 50)
         return final_html
     else:
-        print("❌ 리포트 생성 실패")
-
+        logger.info("❌ 리포트 생성 실패")
 
 #
 # async def main():

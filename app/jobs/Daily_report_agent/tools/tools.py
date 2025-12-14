@@ -7,8 +7,9 @@ from langchain.tools import tool
 from datetime import datetime, timedelta, timezone
 from pydantic import BaseModel, Field
 
+from app.db.repositories.StockNewsRepository import news_repo
 from app.jobs.Daily_report_agent.state.state import StockReportSchema
-from app.services.aws_service import fetch_news_by_date
+# from app.services.aws_service import fetch_news_by_date
 import pandas as pd
 
 
@@ -244,7 +245,7 @@ async def fetch_db_news(symbol: str, days: int = 1, min_importance: int = 6) -> 
 
     try:
         # 실제 AWS 서비스 호출
-        raw_items = await fetch_news_by_date(symbol, from_dt, to_dt, min_importance=min_importance)
+        raw_items = await news_repo.fetch_news_by_date(symbol, from_dt, to_dt, min_importance=min_importance)
 
 
         if not raw_items:

@@ -9,6 +9,7 @@ from app.schemas.stockNews import StockNews
 from app.jobs.stock_news.services.news_service import NewsService
 from .worker import NewsBatchWorker
 from ..analyzer.QuickNewsAnalyzer import QuickNewsAnalyzer
+from app.db.repositories.StockNewsRepository import news_repo
 
 
 # Analyzer 클래스 임포트 (작성하신 파일 경로에 맞게 수정)
@@ -31,7 +32,8 @@ class PipelineManager:
 
         news_service = NewsService(
             crawler_factory=crawler_factory,
-            analyzer=self.analyzer
+            analyzer=self.analyzer,
+            news_repo=news_repo
         )
 
         # 3. 워커 생성 및 배치

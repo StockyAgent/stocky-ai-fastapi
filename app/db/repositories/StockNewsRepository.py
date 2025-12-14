@@ -1,4 +1,4 @@
-from typing import List
+from typing import List, Optional
 from boto3.dynamodb.conditions import Key, Attr
 from botocore.exceptions import ClientError
 
@@ -40,7 +40,7 @@ class NewsRepository:
             print(f"❌ News Save Error: {e}")
             return False
 
-    async def fetch_news_by_date(self, symbol: str, start_ts: int, end_ts: int) -> List[dict]:
+    async def fetch_news_by_date(self, symbol: str, start_ts: int, end_ts: int, min_importance: int = 6) -> List[dict]:
         """
         특정 기간의 뉴스 조회
         """
@@ -51,7 +51,8 @@ class NewsRepository:
         try:
             async with get_dynamodb_table(self.table_name) as table:
                 response = await table.query(
-                    KeyConditionExpression=Key('PK').eq(pk_value) & Key('SK').between(sk_start, sk_end)
+                    KeyConditionExpression=Key('PK').eq(pk_value) & Key('SK').between(sk_start, sk_end),
+                    FilterExpression = Attr('impact_score').gte(min_importance)
                 )
                 return response.get('Items', [])
         except Exception as e:
