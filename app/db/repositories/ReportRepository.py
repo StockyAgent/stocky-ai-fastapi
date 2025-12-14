@@ -12,7 +12,6 @@ logger = logging.getLogger("ReportRepo")
 
 class ReportRepository:
     def __init__(self):
-        # [핵심] 뉴스 데이터와 같은 테이블을 사용합니다 (Single Table Design)
         self.table_name = "StockProjectData"
 
     async def save_report(self, symbol: str, html: str, invest_type: str, category: str = "DAILY") -> bool:
@@ -26,8 +25,8 @@ class ReportRepository:
         ttl_expire = int((now + timedelta(days=30)).timestamp())
 
         # PK, SK 생성 (Repository의 책임)
-        pk = f"REPORT#{symbol}"
-        sk = f"DT#{today_str}#{category}#{invest_type}"
+        pk = f"STOCK#{symbol}"
+        sk = f"REPORT#{today_str}#{category}#{invest_type}"
 
         # 저장할 아이템 구성 (Dict)
         item = {
@@ -68,7 +67,7 @@ class ReportRepository:
         async def _fetch_chunk(chunk_symbols):
             async with sem:
                 keys = [
-                    {"PK": f"REPORT#{sym}", "SK": f"DT#{date}#DAILY#{investment_type}"}
+                    {"PK": f"STOCK#{sym}", "SK": f"REPORT#{date}#DAILY#{investment_type}"}
                     for sym in chunk_symbols
                 ]
                 try:
