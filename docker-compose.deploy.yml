@@ -1,7 +1,7 @@
 services:
   backend-api:
     image: ${DOCKER_USERNAME}/stocky-fastapi:latest
-    container_name: stocky-api
+    container_name: stocky-ai-fastapi
     command: uvicorn main:app --host 0.0.0.0 --port 8080
     ports:
       - "8000:8000"
@@ -11,7 +11,7 @@ services:
 
   retrieval-worker:
     image: ${DOCKER_USERNAME}/stocky-fastapi:latest #같은 이미지 사용
-    container_name: stocky-worker
+    container_name: stocky-ai-worker
     command: python -m app.sqs.worker.main_worker #백그라운드 sqs 감지용 작동
     env_file:
       - .env
