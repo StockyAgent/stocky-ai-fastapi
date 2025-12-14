@@ -40,7 +40,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4  
+        uses: actions/checkout@v4
 
       - name: Copy Docker Compose file to EC2
         uses: appleboy/scp-action@master
@@ -49,7 +49,7 @@ jobs:
           username: ubuntu
           key: ${{ secrets.EC2_KEY }}
           source: "docker-compose.deploy.yml"
-          target: "/home/ubuntu/"
+          target: "/home/ubuntu/fastapi-app"
 
       - name: Deploy to EC2
         uses: appleboy/ssh-action@master
@@ -58,7 +58,7 @@ jobs:
           username: ubuntu
           key: ${{ secrets.EC2_KEY }}
           script: |
-            cd /home/ubuntu
+            cd /home/ubuntu/fastapi-app
             
             # .env 파일 생성
             echo "DOCKER_USERNAME=${{ secrets.DOCKER_USERNAME }}" > .env
