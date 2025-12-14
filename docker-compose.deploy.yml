@@ -1,0 +1,20 @@
+services:
+  backend-api:
+    image: ${DOCKER_USERNAME}/stocky-fastapi:latest
+    container_name: stocky-api
+    command: uvicorn main:app --host 0.0.0.0 --port 8080
+    ports:
+      - "8000:8000"
+    env_file:
+      - .env
+    restart: always # 컨테이너 종료시 자동 재시작
+
+  retrieval-worker:
+    image: ${DOCKER_USERNAME}/stocky-fastapi:latest #같은 이미지 사용
+    container_name: stocky-worker
+    command: python -m app.sqs.worker.main_worker #백그라운드 sqs 감지용 작동
+    env_file:
+      - .env
+    depends_on:
+      - backend-api
+    restart: always # 컨테이너 종료시 자동 재시작
