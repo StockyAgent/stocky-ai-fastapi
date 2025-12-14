@@ -7,3 +7,8 @@ __pycache__/
 .idea/
 .vscode/
 *.swp
+
+pr.py
+pr2.py
+pr3.py
+tool_pr.py
