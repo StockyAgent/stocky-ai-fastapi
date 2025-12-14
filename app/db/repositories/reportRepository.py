@@ -4,6 +4,8 @@ import logging
 
 # [중요] 뉴스 때 만들었던 connection을 그대로 재사용합니다.
 from app.db.connection import get_dynamodb_table
+from app.db.utils import chunk_list
+import asyncio
 
 logger = logging.getLogger("ReportRepo")
 
@@ -52,6 +54,45 @@ class ReportRepository:
         except ClientError as e:
             logger.error(f"❌ DynamoDB Save Failed: {e}")
             raise e  # 라우터에서 500 에러 처리를 위해 예외를 다시 던짐
+
+    async def get_report_batch(self, symbols: list[str], date: str, investment_type: str) -> dict[str, dict]:
+        if not symbols:
+            return {}
+
+        found_items_map = {}
+
+        chunks = list(chunk_list(symbols, 100))  # DynamoDB 제한
+        sem = asyncio.Semaphore(5)  # 동시 요청 제한 (Throttling)
+
+        # 내부 함수: 청크 단위 비동기 조회
+        async def _fetch_chunk(chunk_symbols):
+            async with sem:
+                keys = [
+                    {"PK": f"REPORT#{sym}", "SK": f"DT#{date}#DAILY#{investment_type}"}
+                    for sym in chunk_symbols
+                ]
+                try:
+                    async with get_dynamodb_table(self.table_name) as table:
+                        response = await table.meta.client.batch_get_item(
+                            RequestItems={
+                                self.table_name: {'Keys': keys, 'ConsistentRead': False}
+                            }
+                        )
+                        return response.get('Responses', {}).get(self.table_name, [])
+                except Exception as e:
+                    logger.error(f"Batch Get Error: {e}")
+                    return []
+
+        # 병렬 실행 (Parallel Execution)
+        tasks = [_fetch_chunk(chunk) for chunk in chunks]
+        results = await asyncio.gather(*tasks)
+
+        # 결과 병합
+        for batch in results:
+            for item in batch:
+                found_items_map[item['symbol']] = item
+
+        return found_items_map
 
 
 # 싱글톤 인스턴스 생성
