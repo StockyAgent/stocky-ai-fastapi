@@ -8,6 +8,7 @@ from app.jobs.stock_news.services.news_service import NewsService
 from app.db.repositories.StockNewsRepository import news_repo
 from app.schemas.stockNews import StockNews
 
+
 logger = logging.getLogger("NewsWorker")
 
 class NewsBatchWorker:

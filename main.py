@@ -49,7 +49,6 @@ app.include_router(stock_news.router, prefix="/api/news", tags=["News"])
 app.include_router(stock.router, prefix="/api/stock", tags=["Stock"])
 app.include_router(report.router, prefix="/api/report", tags=["Report"])
 
-app.include_router(report.router, prefix="/api/report", tags=["Report"])
 
 if __name__ == "__main__":
     import uvicorn
