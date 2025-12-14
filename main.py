@@ -36,7 +36,7 @@ async def lifespan(app: FastAPI):
     await manager.stop()
 
 
-app = FastAPI(lifespan=lifespan, title="AI Stock Analyst Agent")
+app = FastAPI(lifespan=lifespan, title="AI Stock Analyst Agent", root_path="/ai")
 
 logging.basicConfig(
     level=logging.INFO,
