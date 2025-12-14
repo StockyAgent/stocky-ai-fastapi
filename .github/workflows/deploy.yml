@@ -21,7 +21,7 @@ jobs:
         id: meta
         uses: docker/metadata-action@v5
         with:
-          images: ${{ secrets.DOCKER_USERNAME }}/stocky-fastapi
+          images: ${{ secrets.DOCKER_USERNAME }}/${{ secrets.PROJECT_NAME }}
           tags: |
             type=raw,value=latest,enable=${{ github.ref == 'refs/heads/main' }}
             type=raw,value=develop,enable=${{ github.ref == 'refs/heads/develop' }}
@@ -42,27 +42,37 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
+      - name: Create Directory
+        uses: appleboy/ssh-action@master
+        with:
+          host: ${{ vars.EC2_HOST }}
+          username: ${{ secrets.EC2_USERNAME }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          script: |
+            mkdir -p /home/ubuntu/apps/fastapi-ai
+
       - name: Copy Docker Compose file to EC2
         uses: appleboy/scp-action@master
         with:
-          host: ${{ secrets.EC2_HOST }}
-          username: ubuntu
-          key: ${{ secrets.EC2_KEY }}
+          host: ${{ vars.EC2_HOST }}
+          username: ${{ secrets.EC2_USERNAME }}
+          key:  ${{ secrets.SSH_PRIVATE_KEY }}
           source: "docker-compose.deploy.yml"
-          target: "/home/ubuntu/fastapi-app"
+          target: "/home/ubuntu/apps/fastapi-ai"
 
       - name: Deploy to EC2
         uses: appleboy/ssh-action@master
         with:
-          host: ${{ secrets.EC2_HOST }}
-          username: ubuntu
-          key: ${{ secrets.EC2_KEY }}
+          host: ${{ vars.EC2_HOST }}
+          username: ${{ secrets.EC2_USERNAME }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
           script: |
-            cd /home/ubuntu/fastapi-app
+            cd /home/ubuntu/apps/fastapi-ai
             
             # .env 파일 생성
             echo "DOCKER_USERNAME=${{ secrets.DOCKER_USERNAME }}" > .env
-            echo "${{ secrets.ENV_VARS_FASTAPI }}" >> .env
+            echo "PROJECT_NAME=${{ secrets.PROJECT_NAME }}" >> .env
+            echo "${{ secrets.ENV_VARS }}" >> .env
             
             mv docker-compose.deploy.yml docker-compose.yml
             
