@@ -10,6 +10,7 @@ from app.routers import stock, stock_news, report
 from contextlib import asynccontextmanager
 from fastapi import FastAPI
 import uvicorn
+from uvicorn.middleware.proxy_headers import ProxyHeadersMiddleware
 
 
 # [Lifespan] 앱 켜질 때 워커 출근 -> 꺼질 때 워커 퇴근 관리
@@ -37,6 +38,7 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(lifespan=lifespan, title="AI Stock Analyst Agent", root_path="/ai")
+app.add_middleware(ProxyHeadersMiddleware, trusted_hosts=["*"])
 
 logging.basicConfig(
     level=logging.INFO,
