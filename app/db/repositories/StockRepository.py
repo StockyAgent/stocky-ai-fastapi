@@ -18,8 +18,8 @@ class StockRepository:
             # Pydantic 모델 -> DynamoDB Item 변환
             item = profile.to_dynamodb_item()
 
-            item['PK'] = f"FIGI#{profile.figi}"
-            item['SK'] = "METADATA"
+            item['PK'] = f"STOCK#{profile.figi}"
+            item['SK'] = "PROFILE"
 
             # [변경] put_item_dynamodb 대신 직접 context manager 사용
             async with get_dynamodb_table(self.table_name) as table:
