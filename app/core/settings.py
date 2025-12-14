@@ -5,7 +5,7 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 class Settings(BaseSettings):
     # 환경 구분
-    APP_ENV: str = "development"
+    APP_ENV: str = "production"
 
     #Finnhub API Key
     FINNHUB_API_KEY: str

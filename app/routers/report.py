@@ -70,7 +70,7 @@ async def generate_daily_reports(request: ManySymbolReportRequest):
 async def fetch_reports(request: ReportRetrievalRequest):
     results = await report_service.get_aggregated_reports(
         symbols=request.symbols,
-        invest_type="trader"  #request.investment_type
+        invest_type="trader"  #request.investment_type TODO: 수정 필요
     )
 
     return ReportRetrievalResponse(

@@ -26,8 +26,8 @@ class ReportRepository:
         ttl_expire = int((now + timedelta(days=30)).timestamp())
 
         # PK, SK 생성 (Repository의 책임)
-        pk = f"REPORT#{symbol}"
-        sk = f"DT#{today_str}#{category}#{invest_type}"
+        pk = f"STOCK#{symbol}"
+        sk = f"REPORT#{today_str}#{category}#{invest_type}"
 
         # 저장할 아이템 구성 (Dict)
         item = {
