@@ -15,11 +15,13 @@ class ReportService:
     def __init__(self):
         self.repo = report_repo
 
-    async def get_aggregated_reports(self, symbols: list[str], invest_type: str, date: Optional[str] = None) -> list[ReportItem]:
+    async def get_aggregated_reports(self, symbols: list[str], invest_type: Optional[str], date: Optional[str] = None) -> list[ReportItem]:
         #타겟 날짜 선정: 스프링에서는 date가 요청 인자로 오지 않는다(추후 확장 가능성을 위해 date 함수 인자로 받음)
         target_date = date
         if not target_date:
             target_date = get_today_date_kst()
+        if not invest_type:
+            invest_type = "investor"  # 기본값 설정
 
         # fetched_map = {'AAPL': {...}, 'GOOG': {...}}
         fetched_map = await self.repo.get_report_batch(symbols, target_date, invest_type)

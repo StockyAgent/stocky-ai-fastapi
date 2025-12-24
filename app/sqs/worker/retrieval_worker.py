@@ -15,12 +15,13 @@ class RetrievalWorker(BaseSQSWorker):
         super().__init__(queue_url=settings.SQS_REQUEST_QUEUE_URL)
 
     async def process_message(self, message_body: str) -> bool:
+        from pydantic import ValidationError
         try:
             #  JSON 파싱
             data = json.loads(message_body)
             request = ReportRetrievalRequest(**data)
 
-            logger.info(f"🔍 [조회 시작] User: {request.user_id}, 종목: {request.symbols}")
+            logger.info(f"🔍 [조회 시작] User: {request.userId}, 종목: {request.symbols}")
 
             # DB 조회 (Service 호출)
             reports = await report_service.get_aggregated_reports(
@@ -30,7 +31,7 @@ class RetrievalWorker(BaseSQSWorker):
 
             # 응답 포맷팅
             response = ReportRetrievalResponse(
-                user_id=request.user_id,
+                userId=request.userId,
                 reports=reports
             )
 
@@ -38,6 +39,12 @@ class RetrievalWorker(BaseSQSWorker):
             await sqs_service.send_response(response.model_dump())
 
             return True  # 성공!
+
+        except ValidationError as e:
+            # 유효성 검사 실패시 True 반환으로 재시도 불가 처리
+            logger.error(f"🗑️ [데이터 폐기] 유효성 검사 실패 (재시도 불가): {e}")
+            return True
+
 
         except Exception as e:
             logger.error(f"❌ [처리 실패] 데이터: {message_body[:50]}... / 원인: {e}")
