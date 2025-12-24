@@ -315,10 +315,37 @@ async def search_market_issues(query: str) -> List[dict]:
 
 
 def render_html_report(symbol: str, data: StockReportSchema) -> str:
-    """JSON 데이터를 받아 HTML 코드로 변환 (UI/UX 강화 버전)"""
-    current_date = datetime.now().strftime("%Y-%m-%d")
+    """JSON 데이터를 받아 이메일 친화적인 HTML 코드로 변환 (Inline Style 적용 버전)"""
 
-    # 카테고리별 색상 매핑
+    # --- [Style Constants] CSS를 Python 변수로 관리 (유지보수 용이성) ---
+
+    # 1. 컨테이너 & 레이아웃
+    S_CONTAINER = "max-width: 600px; margin: 0 auto; background-color: #ffffff; border: 1px solid #e1e4e8; border-radius: 12px; font-family: -apple-system, BlinkMacSystemFont, 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif; overflow: hidden;"
+    S_BODY_PADDING = "padding: 24px;"
+
+    # 2. 헤더 영역 (심플해진 디자인)
+    S_HEADER_BOX = "padding: 24px 24px 20px 24px; border-bottom: 1px solid #f0f0f0; background-color: #ffffff;"
+    S_SYMBOL_BOX = "display: inline-block; background-color: #2a5298; color: #ffffff; font-weight: 800; font-size: 14px; padding: 4px 10px; border-radius: 6px; margin-bottom: 8px;"
+    S_DATE_TEXT = "float: right; color: #888; font-size: 12px; margin-top: 4px;"
+    S_HEADLINE = "font-size: 20px; font-weight: 800; color: #111; line-height: 1.4; margin: 0 0 8px 0; letter-spacing: -0.5px;"
+    S_METAPHOR = "font-size: 14px; color: #666; font-style: italic; margin: 0;"
+
+    # 3. 섹션 공통
+    S_SECTION_TITLE = "font-size: 15px; font-weight: 700; color: #2a5298; margin: 30px 0 12px 0; text-transform: uppercase; letter-spacing: 0.5px; border-left: 4px solid #2a5298; padding-left: 10px;"
+    S_TEXT_BODY = "font-size: 15px; line-height: 1.7; color: #333; margin: 0; text-align: left;"  # 양쪽 정렬 제거
+
+    # 4. 카드 디자인 (그림자 제거, 플랫하게)
+    S_CARD = "background-color: #f8f9fa; border: 1px solid #e9ecef; border-radius: 8px; padding: 16px; margin-bottom: 16px;"
+    S_BADGE_BASE = "display: inline-block; font-size: 11px; font-weight: 800; padding: 3px 8px; border-radius: 4px; margin-right: 8px; color: #ffffff;"
+    S_CARD_TITLE = "font-weight: 700; font-size: 15px; color: #222;"
+    S_FACT_BOX = "font-size: 13px; color: #555; margin: 10px 0 8px 0; line-height: 1.5;"
+    S_ANALYSIS_BOX = "font-size: 13px; color: #444; background-color: #ffffff; padding: 12px; border-radius: 6px; border: 1px solid #eee; line-height: 1.5;"
+
+    # 5. 버튼 & 인사이트
+    S_BTN_LINK = "display: inline-block; margin-top: 10px; font-size: 12px; font-weight: 600; color: #2a5298; text-decoration: none;"
+    S_INSIGHT_BOX = "background-color: #e8f5e9; border: 1px solid #c8e6c9; border-radius: 8px; padding: 16px; color: #2e7d32; font-size: 14px; line-height: 1.6; font-weight: 500;"
+
+    # 카테고리별 뱃지 색상 (배경색만 변경)
     color_map = {
         "호재": "#D32F2F",  # 빨강
         "악재": "#1976D2",  # 파랑
@@ -327,129 +354,78 @@ def render_html_report(symbol: str, data: StockReportSchema) -> str:
         "불확실": "#757575"  # 회색
     }
 
-    # 1. 이슈 카드 HTML 생성
+    current_date_str = datetime.now().strftime("%Y.%m.%d")
+
+    # --- [Logic] 1. 이슈 카드 HTML 생성 ---
     issues_html = ""
     for issue in data.key_issues:
-        badge_bg = color_map.get(issue.category, "#546e7a")
+        badge_color = color_map.get(issue.category, "#546e7a")
 
-        # [수정 포인트] URL이 있을 때만 버튼 생성
+        # 버튼 로직
         url_button = ""
         if issue.url and issue.url.strip():
             url_button = f"""
-            <div class="link-container">
-                <a href="{issue.url}" target="_blank" class="btn-read-more">
-                    원문 전체보기 <span class="arrow">→</span>
+            <div style="text-align: right;">
+                <a href="{issue.url}" target="_blank" style="{S_BTN_LINK}">
+                    원문 보기 →
                 </a>
             </div>
             """
 
         issues_html += f"""
-        <div class="issue-card">
-            <div class="issue-header">
-                <span class="badge" style="background-color: {badge_bg};">{issue.category}</span>
-                <span class="issue-title-text">{issue.title}</span>
+        <div style="{S_CARD}">
+            <div style="margin-bottom: 8px;">
+                <span style="{S_BADGE_BASE} background-color: {badge_color};">{issue.category}</span>
+                <span style="{S_CARD_TITLE}">{issue.title}</span>
             </div>
-            <div class="issue-body">
-                <div class="fact-box">
-                    <strong>[Fact]</strong> 
-                    {issue.fact}
-                </div>
-                <div class="analysis-box">
-                    <strong>[Analysis]</strong> 
-                    {issue.analysis}
-                </div>
-                {url_button}
+
+            <div style="{S_FACT_BOX}">
+                <strong style="color:#000;">[Fact]</strong> {issue.fact}
             </div>
+            <div style="{S_ANALYSIS_BOX}">
+                <strong style="color:#2a5298;">[Analysis]</strong><br>
+                {issue.analysis}
+            </div>
+            {url_button}
         </div>
         """
 
-    # 2. 전체 HTML 조립 (CSS 대폭 강화)
-    html_template = f"""
-    <div class="report-container">
-        <style>
-            /* 기본 설정 */
-            .report-container {{ font-family: -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo", "Pretendard", sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; border-radius: 20px; overflow: hidden; background: #ffffff; box-shadow: 0 10px 30px rgba(0,0,0,0.12); border: 1px solid #eaeaea; }}
+    # --- [Logic] 2. 전체 HTML 조립 (Inline Styles applied) ---
+    # 주의: 여기서 <html>, <body> 태그는 넣지 않습니다 (Spring이 감싸줄 것이므로)
 
-            /* 헤더 디자인 */
-            .header {{ background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%); padding: 35px 25px; color: white; position: relative; }}
-            .symbol-tag {{ background: rgba(255,255,255,0.15); padding: 5px 12px; border-radius: 30px; font-size: 0.8rem; font-weight: 700; margin-bottom: 12px; display: inline-block; letter-spacing: 0.5px; backdrop-filter: blur(5px); border: 1px solid rgba(255,255,255,0.2); }}
-            .headline {{ font-size: 1.7rem; font-weight: 800; margin-bottom: 8px; line-height: 1.35; letter-spacing: -0.5px; text-shadow: 0 2px 4px rgba(0,0,0,0.1); }}
-            .metaphor {{ font-style: italic; opacity: 0.9; font-size: 1rem; font-weight: 300; margin-top: 5px; }}
+    final_html = f"""
+    <div style="{S_CONTAINER}">
 
-            /* 섹션 타이틀 */
-            .section-title {{ font-size: 1.25rem; font-weight: 800; margin: 35px 25px 15px; display: flex; align-items: center; color: #1a1a1a; letter-spacing: -0.3px; }}
-            .section-title::before {{ content: ''; display: inline-block; width: 6px; height: 24px; background: #2a5298; margin-right: 10px; border-radius: 3px; }}
-
-            /* 본문 박스 */
-            .content-box {{ padding: 0 25px; color: #444; font-size: 0.98rem; text-align: justify; line-height: 1.7; letter-spacing: -0.2px; }}
-
-            /* 이슈 카드 디자인 (핵심) */
-            .issue-card {{ background: #ffffff; margin: 0 20px 24px; border-radius: 16px; border: 1px solid #f0f0f0; box-shadow: 0 4px 12px rgba(0,0,0,0.03); transition: transform 0.2s ease; overflow: hidden; }}
-            .issue-card:hover {{ transform: translateY(-2px); box-shadow: 0 8px 16px rgba(0,0,0,0.06); }}
-
-            .issue-header {{ padding: 16px 20px; background: #fafafa; border-bottom: 1px solid #eee; display: flex; align-items: start; }}
-            .badge {{ padding: 4px 8px; border-radius: 6px; color: white; font-size: 0.7rem; margin-right: 10px; font-weight: 700; white-space: nowrap; margin-top: 3px; }}
-            .issue-title-text {{ font-weight: 700; font-size: 1.05rem; color: #333; line-height: 1.4; }}
-
-            .issue-body {{ padding: 20px; }}
-            .fact-box {{ margin-bottom: 12px; color: #555; font-size: 0.95rem; }}
-            .analysis-box {{ color: #444; font-size: 0.95rem; background: #f8faff; padding: 12px; border-radius: 8px; border-left: 3px solid #2a5298; }}
-
-            /* 버튼 디자인 (Call To Action) */
-            .link-container {{ text-align: right; margin-top: 15px; }}
-            .btn-read-more {{ 
-                display: inline-flex; align-items: center; justify-content: center;
-                padding: 8px 16px; 
-                background-color: #ffffff; 
-                color: #555; 
-                border: 1px solid #ddd; 
-                border-radius: 50px; 
-                text-decoration: none; 
-                font-size: 0.85rem; 
-                font-weight: 600; 
-                transition: all 0.2s ease; 
-            }}
-            .btn-read-more:hover {{ 
-                background-color: #2a5298; 
-                color: #ffffff; 
-                border-color: #2a5298; 
-                box-shadow: 0 2px 8px rgba(42, 82, 152, 0.25);
-            }}
-            .arrow {{ margin-left: 6px; transition: transform 0.2s; }}
-            .btn-read-more:hover .arrow {{ transform: translateX(3px); }}
-
-            /* 인사이트 & 푸터 */
-            .insight-box {{ background: linear-gradient(to right, #e8f5e9, #f1f8e9); margin: 20px 25px; padding: 20px; border-radius: 12px; color: #2e7d32; border: 1px solid #c8e6c9; font-weight: 500; font-size: 0.95rem; line-height: 1.7; }}
-            .footer {{ text-align: center; font-size: 0.75rem; color: #aaa; padding: 25px; border-top: 1px solid #f0f0f0; background: #fafafa; letter-spacing: 0.5px; }}
-            strong {{ color: #222; font-weight: 700; }}
-        </style>
-
-        <div class="header">
-            <div class="symbol-tag">{symbol} Daily Brief</div>
-            <div class="headline">{data.headline}</div>
-            <div class="metaphor">"{data.metaphor}"</div>
+        <div style="{S_HEADER_BOX}">
+            <div>
+                <span style="{S_SYMBOL_BOX}">{symbol} Daily Brief</span>
+                <span style="{S_DATE_TEXT}">{current_date_str}</span>
+            </div>
+            <div style="{S_HEADLINE}">{data.headline}</div>
+            <div style="{S_METAPHOR}">"{data.metaphor}"</div>
         </div>
 
-        <div class="section-title">📊 심층 주가 분석</div>
-        <div class="content-box">
-            {data.price_analysis}
+        <div style="{S_BODY_PADDING}">
+
+            <div style="{S_SECTION_TITLE}">📊 심층 주가 분석</div>
+            <p style="{S_TEXT_BODY}">
+                {data.price_analysis}
+            </p>
+
+            <div style="{S_SECTION_TITLE}">🔥 주요 이슈 분석</div>
+            {issues_html}
+
+            <div style="{S_SECTION_TITLE}">💡 Stocky's Insight</div>
+            <div style="{S_INSIGHT_BOX}">
+                {data.insight}
+            </div>
+
         </div>
 
-        <div class="section-title">🔥 주요 이슈 분석 (Top Picks)</div>
-        {issues_html}
-
-        <div class="section-title">💡 Stocky's Insight</div>
-        <div class="insight-box">
-            {data.insight}
         </div>
-
-        <div class="footer">
-            Generated by Stocky AI • {current_date}
-        </div>
-    </div>
     """
-    return html_template
 
+    return final_html
 
 
 #테스트
