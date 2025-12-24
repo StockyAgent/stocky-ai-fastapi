@@ -28,9 +28,9 @@ class ManySymbolReportRequest(BaseModel):
 
 class ReportRetrievalRequest(BaseModel): #(조회용) Spring Boot -> FastAPI 조회 요청
     # request_id: str = Field(..., description="요청 추적 ID (UUID)") # user_id로 구분할 예정
-    user_id: str
+    userId: int = Field(alias="userId")
     symbols: List[str]
-    investment_type: str
+    investment_type: Optional[str] = Field(default="investor", alias="investmentStyle")
 
 # ==========================================
 # Response Schemas (API 요청용 DTO)
@@ -39,7 +39,7 @@ class ReportRetrievalRequest(BaseModel): #(조회용) Spring Boot -> FastAPI 조
 class ReportRetrievalResponse(BaseModel):
     """(조회용) 최종 반환될 큰 박스"""
     # request_id: str  # 요청받았던 ID를 그대로 돌려줌 (확인용)
-    user_id: str
+    userId: int
     reports: List[ReportItem] #ReportItem들이 담기는 용도
 
 # ==========================================

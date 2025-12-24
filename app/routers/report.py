@@ -15,7 +15,6 @@ from app.jobs.Daily_report_agent.nodes.nodes import write_report
 router = APIRouter()
 
 
-# 2. 엔드포인트 정의
 @router.post("/generate/daily_report", response_class=HTMLResponse)
 async def generate_daily_report(request: ReportRequest):
     """
@@ -74,7 +73,6 @@ async def fetch_reports(request: ReportRetrievalRequest):
     )
 
     return ReportRetrievalResponse(
-        request_id=request.request_id,
         user_id=request.user_id,
         results=results
     )
